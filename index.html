@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ローカルPDF検索アシスタント - 履歴機能修正版</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-glass: rgba(30, 41, 59, 0.9);
+  --surface2: #334155;
+  --border: #475569;
+  --border-focus: #38bdf8;
+  --text: #f8fafc;
+  --text-dim: #cbd5e1;
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --accent: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+  --shadow-main: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.7;
+  font-size: 18px;
+}
+
+header {
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 1.2rem 2rem;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow-main);
+}
+.header-inner {
+  max-width: 1600px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;
+}
+.logo { display: flex; align-items: center; gap: 1rem; }
+.logo-icon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-radius: var(--radius-md);
+  display: grid; place-items: center; font-size: 1.6rem; color: #fff;
+  box-shadow: 0 0 15px rgba(2, 132, 199, 0.4);
+}
+.logo h1 {
+  font-size: 1.7rem; font-weight: 800; color: #ffffff; letter-spacing: -0.01em;
+}
+.logo span { font-size: 0.95rem; color: var(--text-dim); display: block; font-weight: 500; }
+
+.controls { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
+
+button, a.btn-link {
+  font-family: inherit; cursor: pointer; border: none; border-radius: var(--radius-md);
+  padding: 0.85rem 1.5rem; font-size: 1.1rem; font-weight: 700; text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+button:hover, a.btn-link:hover { transform: translateY(-1px); border-color: #94a3b8; }
+button:active, a.btn-link:active { transform: translateY(0) scale(0.98); }
+
+.btn-primary {
+  background: var(--primary);
+  color: white; border: 1px solid #38bdf8;
+}
+.btn-primary:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 0 15px rgba(2, 132, 199, 0.5);
+}
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-secondary {
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: #475569; color: #fff; }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost { background: transparent; color: var(--text-dim); border-color: transparent; box-shadow: none; }
+.btn-ghost:hover { color: var(--text); background: var(--surface2); }
+
+.btn-action {
+  background: var(--accent);
+  color: white; border: 1px solid #c084fc;
+}
+.btn-action:hover { background: var(--accent-hover); box-shadow: 0 0 15px rgba(139, 92, 246, 0.5); }
+
+.btn-sm { padding: 0.55rem 1rem; font-size: 0.98rem; border-radius: var(--radius-sm); }
+
+main {
+  max-width: 1600px; margin: 0 auto; padding: 1.8rem;
+  display: grid; grid-template-columns: 340px 1fr; gap: 1.8rem;
+}
+@media (max-width: 1024px) { main { grid-template-columns: 1fr; } }
+
+.sidebar {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.6rem; height: fit-content; position: sticky; top: 100px; box-shadow: var(--shadow-main);
+}
+.sidebar h2 {
+  font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: #38bdf8; margin-bottom: 0.8rem; font-weight: 800;
+}
+.file-list { max-height: 400px; overflow-y: auto; margin-bottom: 1rem; }
+.file-item {
+  display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.8rem;
+  border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s; border: 1px solid transparent;
+  margin-bottom: 0.4rem; background: rgba(255,255,255,0.02);
+}
+.file-item:hover { background: var(--surface2); border-color: var(--border-focus); }
+.file-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-size: 1.02rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.file-meta { font-size: 0.88rem; color: var(--text-dim); margin-top: 3px; }
+
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem; }
+.stat-box {
+  background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.9rem; text-align: center;
+}
+.stat-value { font-size: 2.1rem; font-weight: 800; color: #38bdf8; line-height: 1.1; }
+.stat-label { font-size: 0.8rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; margin-top: 0.3rem; }
+
+.content { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.search-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.8rem;
+  box-shadow: var(--shadow-main);
+}
+.search-row { display: flex; gap: 0.8rem; margin-bottom: 1.2rem; }
+.search-input-wrap { flex: 1; position: relative; }
+.search-input {
+  width: 100%; background: #0f172a; border: 2px solid var(--border); border-radius: var(--radius-md);
+  padding: 1.1rem 1.2rem 1.1rem 3.4rem; color: #ffffff; font-size: 1.35rem; font-weight: 700;
+  font-family: inherit; outline: none; transition: all 0.2s;
+}
+.search-input:focus { border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
+.search-icon { position: absolute; left: 1.2rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 1.4rem; }
+.options-row {
+  display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center;
+  font-size: 1.05rem; color: #e2e8f0; font-weight: 600;
+}
+.option { display: flex; align-items: center; gap: 0.6rem; }
+.option input[type="checkbox"] { width: 20px; height: 20px; accent-color: #38bdf8; cursor: pointer; }
+.option select, .option input[type="date"] {
+  background: #0f172a; border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius-sm); padding: 0.5rem 0.9rem; font-family: inherit; font-size: 1.02rem; font-weight: 600;
+}
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 0.8rem; }
+.results-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.8rem; }
+.results-header h2 { font-size: 1.6rem; font-weight: 800; color: var(--text); }
+.results-count { font-size: 1.2rem; color: #38bdf8; font-weight: 700; }
+
+.results-grid { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.result-group {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.8rem;
+  box-shadow: var(--shadow-main);
+}
+.result-group-title {
+  font-size: 1.35rem; font-weight: 800; color: #38bdf8; margin-bottom: 1.2rem;
+  display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.9rem;
+}
+.page-hit {
+  border-top: 1px solid var(--border); padding-top: 1.4rem; margin-top: 1.4rem;
+}
+.page-hit:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.page-title { font-size: 1.2rem; font-weight: 800; color: #c4b5fd; margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem; }
+.hit-info { display: flex; gap: 1.4rem; flex-wrap: wrap; margin-bottom: 0.9rem; font-size: 0.98rem; color: var(--text-dim); font-weight: 600; }
+
+.context-block {
+  background: #090d16; padding: 1.5rem; border-radius: var(--radius-md); white-space: pre-wrap; line-height: 1.9;
+  font-size: 1.15rem; margin-bottom: 1.2rem; border: 1px solid var(--border); color: #f1f5f9;
+}
+.context-block mark, mark.keyword-focus {
+  background: #fde047; color: #000; font-weight: 900; padding: 4px 10px; border-radius: 6px; 
+  box-shadow: 0 0 15px rgba(253, 224, 71, 0.8); border: 2px solid #ca8a04;
+}
+
+.empty-state { text-align: center; padding: 4rem 1.5rem; color: var(--text-dim); }
+.empty-state .icon { font-size: 4rem; margin-bottom: 0.8rem; opacity: 0.5; }
+.empty-state h3 { color: var(--text); margin-bottom: 0.5rem; font-size: 1.4rem; font-weight: 800; }
+
+.toast {
+  position: fixed; bottom: 2rem; right: 2rem; background: var(--surface);
+  border: 2px solid #38bdf8; color: var(--text); padding: 1.1rem 1.8rem;
+  border-radius: var(--radius-md); box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 3000;
+  transform: translateY(100px); opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 1.1rem; font-weight: 700;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: var(--success); }
+.toast.error { border-color: var(--danger); }
+
+.progress-wrap { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 0.9rem; display: none; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, #38bdf8, var(--accent)); width: 0%; transition: width 0.2s; }
+
+.compare-bar {
+  background: var(--surface);
+  border: 2px solid var(--accent); border-radius: var(--radius-lg); padding: 1.3rem 1.5rem;
+  display: none; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.25);
+}
+.compare-bar.show { display: flex; }
+.compare-slots { display: flex; gap: 0.7rem; overflow-x: auto; padding-bottom: 2px; max-width: 65%; align-items: center; }
+.compare-slot {
+  background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.6rem 1rem; font-size: 0.98rem; flex-shrink: 0; display: flex; align-items: center; gap: 0.6rem;
+}
+.compare-slot .slot-name { font-weight: 700; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ddd6fe; }
+.compare-slot .btn-del { cursor: pointer; color: var(--danger); font-weight: 800; margin-left: 0.3rem; }
+
+.compare-view-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+}
+.compare-view-header h2 { font-size: 1.6rem; font-weight: 800; color: #c4b5fd; }
+.compare-view {
+  display: none; flex-direction: column; gap: 1rem; margin-top: 0.5rem;
+}
+.compare-view.show { display: flex; }
+
+.compare-horizontal-container {
+  display: flex; gap: 1.8rem; overflow-x: auto; padding-bottom: 1.2rem; scrollbar-width: thin;
+}
+
+.compare-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  flex: 0 0 520px; max-width: 520px; display: flex; flex-direction: column; height: 85vh; overflow: hidden; box-shadow: var(--shadow-main);
+}
+.compare-panel-header {
+  padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border);
+  background: var(--surface2); display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-shrink: 0;
+}
+.compare-panel-header h3 { font-size: 1.15rem; font-weight: 800; color: #38bdf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.compare-panel-controls {
+  padding: 1rem 1.5rem; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-shrink: 0;
+}
+.compare-panel-body { padding: 1.5rem; overflow-y: auto; flex: 1; font-size: 1.05rem; display: flex; flex-direction: column; gap: 1.4rem; }
+
+.compare-card-section {
+  background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.2rem;
+}
+.compare-card-label { font-size: 0.9rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
+.compare-card-content { font-size: 1.08rem; line-height: 1.85; max-height: 200px; overflow-y: auto; white-space: pre-wrap; color: #f1f5f9; }
+
+.pdf-canvas-wrapper {
+  width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: auto; background: #334155;
+  max-height: 360px; display: flex; justify-content: center; align-items: flex-start; padding: 10px; position: relative;
+}
+canvas.pdf-render-canvas { max-width: 100%; height: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+
+.history-list { max-height: 180px; overflow-y: auto; font-size: 1rem; }
+.history-item { padding: 0.5rem 0.7rem; border-radius: var(--radius-sm); cursor: pointer; color: var(--text-dim); font-weight: 600; transition: all 0.2s; }
+.history-item:hover { background: var(--surface2); color: var(--text); }
+
+.status-bar { font-size: 0.95rem; color: var(--text-dim); margin-top: 0.8rem; font-weight: 600; }
+.status-ok { color: var(--success); }
+.status-ng { color: var(--danger); }
+
+footer {
+  text-align: center; padding: 2.2rem; color: var(--text-dim); font-size: 1rem; font-weight: 600;
+  border-top: 1px solid var(--border); margin-top: 2.5rem;
+}
+.kbd {
+  display: inline-block; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 0.25rem 0.6rem; font-size: 0.95rem; font-family: monospace; color: #38bdf8;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <h1>ローカルPDF検索アシスタント</h1>
+        <span>履歴機能・標準リンク版</span>
+      </div>
+    </div>
+    <div class="controls">
+      <a href="使い方.html" target="_blank" class="btn-secondary btn-link">📖 使い方</a>
+      <button class="btn-primary" id="btnSelectFolder">📁 フォルダを選択</button>
+      <button class="btn-secondary" id="btnClear" disabled>クリア</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <aside class="sidebar">
+    <h2>読み込み済みPDF</h2>
+    <div class="file-list" id="fileList">
+      <div class="empty-state" style="padding:1.5rem 0.5rem;">
+        <div style="font-size:2.2rem;opacity:0.3;">📂</div>
+        <p style="font-size:1rem; font-weight:700;">フォルダを選択してください</p>
+      </div>
+    </div>
+    <div class="stats" id="stats" style="display:none;">
+      <div class="stat-box"><div class="stat-value" id="statFiles">0</div><div class="stat-label">ファイル</div></div>
+      <div class="stat-box"><div class="stat-value" id="statHits">0</div><div class="stat-label">ヒット</div></div>
+    </div>
+    <div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar"></div></div>
+    <div class="status-bar" id="pdfjsStatus">PDF.js: 読み込み中…</div>
+
+    <h2 style="margin-top:1.8rem;">検索履歴</h2>
+    <div class="history-list" id="historyList"><div style="color:var(--text-dim);font-size:0.98rem;">まだありません</div></div>
+  </aside>
+
+  <div class="content">
+    <div class="search-panel">
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" id="searchInput" placeholder="検索キーワードを入力（スペース区切りで複数指定）" disabled>
+        </div>
+        <button class="btn-primary" id="btnSearch" disabled>⚡ 検索実行</button>
+      </div>
+      <div class="options-row">
+        <label class="option"><input type="checkbox" id="optAnd" checked> AND検索</label>
+        <label class="option"><input type="checkbox" id="optCase"> 大文字小文字を区別</label>
+        <label class="option"><input type="checkbox" id="optLongContext" checked> 長めの抜粋</label>
+        <div class="option">並び順:
+          <select id="sortOrder">
+            <option value="relevance">関連度順</option>
+            <option value="name">ファイル名順</option>
+            <option value="newest">新しい順</option>
+            <option value="oldest">古い順</option>
+          </select>
+        </div>
+        <div class="option">期間:
+          <input type="date" id="dateFrom" title="開始日">
+          <span>〜</span>
+          <input type="date" id="dateTo" title="終了日">
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-bar" id="compareBar">
+      <div class="compare-slots" id="compareSlots"></div>
+      <div style="display:flex;gap:0.8rem;flex-shrink:0;">
+        <button class="btn-action btn-sm" id="btnStartCompare" disabled>⚡ 並べて比較 (<span id="compareCount">0</span>)</button>
+        <button class="btn-ghost btn-sm" id="btnClearCompare">クリア</button>
+      </div>
+    </div>
+
+    <div id="normalResults">
+      <div class="toolbar">
+        <button class="btn-secondary btn-sm" id="btnExportCsv" disabled>📥 CSV出力</button>
+        <button class="btn-secondary btn-sm" id="btnExportMd" disabled>📥 Markdown出力</button>
+        <button class="btn-secondary btn-sm" id="btnExportTxt" disabled>📥 テキスト出力</button>
+        <span style="font-size:0.98rem;color:var(--text-dim);margin-left:auto;font-weight:600;">
+          <span class="kbd">/</span> 検索フォーカス
+        </span>
+      </div>
+      <div class="results-header">
+        <h2>検索結果一覧</h2>
+        <span class="results-count" id="resultsCount"></span>
+      </div>
+      <div class="results-grid" id="resultsGrid">
+        <div class="empty-state" id="emptyState">
+          <div class="icon">🚀</div>
+          <h3>準備完了</h3>
+          <p>フォルダを選択し、キーワードを入力して検索を実行してください。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-view" id="compareView">
+      <div class="compare-view-header">
+        <h2>⚡ マルチパラレル比較ビュー (古い更新日順・前のページ順)</h2>
+        <button class="btn-secondary btn-sm" id="btnCloseCompare">✕ 比較を終了</button>
+      </div>
+      <div class="compare-horizontal-container" id="compareContainer"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  完全ローカル動作 | PDF.js + File System Access API | 外部データ送信なし
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+let pdfjsLib = null;
+let files = [];
+let searchResults = [];
+let compareList = [];
+let searchHistory = JSON.parse(localStorage.getItem("pdfSearchHistory") || "[]");
+let rootDirectoryHandle = null;
+
+const $ = id => document.getElementById(id);
+const btnSelectFolder = $("btnSelectFolder");
+const btnClear = $("btnClear");
+const btnSearch = $("btnSearch");
+const searchInput = $("searchInput");
+const fileList = $("fileList");
+const resultsGrid = $("resultsGrid");
+const resultsCount = $("resultsCount");
+const stats = $("stats");
+const progressWrap = $("progressWrap");
+const progressBar = $("progressBar");
+const toast = $("toast");
+const pdfjsStatus = $("pdfjsStatus");
+const compareBar = $("compareBar");
+const compareView = $("compareView");
+const normalResults = $("normalResults");
+
+function showToast(msg, type = "success") {
+  toast.textContent = msg;
+  toast.className = "toast show " + type;
+  setTimeout(() => toast.classList.remove("show"), 3500);
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+}
+function formatDate(ts) {
+  if (!ts) return "不明";
+  return new Date(ts).toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+function isNew(ts) {
+  if (!ts) return false;
+  return (Date.now() - ts) / 86400000 <= 90;
+}
+function escapeHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function highlight(text, terms) {
+  if (!terms?.length) return escapeHtml(text);
+  let result = escapeHtml(text);
+  terms.forEach((t, idx) => {
+    if (!t) return;
+    const re = new RegExp("(" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi");
+    const cls = (idx === 0) ? "keyword-focus" : "";
+    result = result.replace(re, `<mark class="${cls}">$1</mark>`);
+  });
+  return result;
+}
+
+function getTimestampStr() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const min = pad(d.getMinutes());
+  const ss = pad(d.getSeconds());
+  return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
+}
+
+async function savePageAsImage(fileObj, pageNum, fileName) {
+  try {
+    showToast("該当ページを高画質画像として生成中...", "success");
+    const loadingTask = pdfjsLib.getDocument({ data: fileObj.arrayBuffer.slice(0) });
+    const pdf = await loadingTask.promise;
+    const page = await pdf.getPage(pageNum);
+    
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+    const searchWordSafe = (searchInput.value.trim() || "search").replace(/[\/\\?%*:|"<>]/g, "_");
+    const timeStr = getTimestampStr();
+    const cleanFileName = fileName.replace(/\.[^/.]+$/, "");
+    const imageFileName = `${timeStr}_${searchWordSafe}_${cleanFileName}_p${pageNum}.png`;
+
+    canvas.toBlob(async blob => {
+      try {
+        if (rootDirectoryHandle) {
+          const imgDirHandle = await rootDirectoryHandle.getDirectoryHandle("出力画像", { create: true });
+          const fileHandle = await imgDirHandle.getFileHandle(imageFileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          showToast(`「出力画像」フォルダに保存完了: ${imageFileName}`, "success");
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = imageFileName;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast("画像を保存しました", "success");
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("画像保存処理に失敗しました: " + err.message, "error");
+      }
+    }, "image/png");
+  } catch (e) {
+    console.error(e);
+    showToast("画像生成に失敗しました: " + e.message, "error");
+  }
+}
+
+const DB_NAME = "LocalPdfSearchCache";
+const STORE = "texts";
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: "key" });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function getCache(key) {
+  try {
+    const db = await openDB();
+    return new Promise(resolve => {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).get(key);
+      req.onsuccess = () => resolve(req.result?.data || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch { return null; }
+}
+async function setCache(key, data) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put({ key, data, ts: Date.now() });
+  } catch {}
+}
+
+async function initPdfJs() {
+  try {
+    pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs";
+    pdfjsStatus.textContent = "PDF.js: 準備完了 ✓";
+    pdfjsStatus.className = "status-bar status-ok";
+    return true;
+  } catch (e) {
+    console.error(e);
+    pdfjsStatus.innerHTML = "PDF.js: 読み込み失敗 ✗";
+    pdfjsStatus.className = "status-bar status-ng";
+    showToast("PDF.jsの読み込みに失敗しました", "error");
+    return false;
+  }
+}
+
+async function extractTextFromPdf(arrayBuffer, cacheKey) {
+  if (cacheKey) {
+    const cached = await getCache(cacheKey);
+    if (cached) return cached;
+  }
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    const numPages = pdf.numPages;
+    const pageTexts = [];
+    let fullText = "";
+
+    for (let i = 1; i <= numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(" ");
+      pageTexts.push({ page: i, text: pageText });
+      fullText += pageText + "\n";
+    }
+    fullText = fullText.replace(/\s+/g, " ").trim();
+    const isLikelyScan = fullText.length < 80 && numPages > 0;
+    const result = { text: fullText, pageTexts, pages: numPages, error: null, isLikelyScan };
+    if (cacheKey) await setCache(cacheKey, result);
+    return result;
+  } catch (e) {
+    return { text: "", pageTexts: [], pages: 0, error: "抽出エラー: " + e.message, isLikelyScan: false };
+  }
+}
+
+btnSelectFolder.addEventListener("click", async () => {
+  if (!pdfjsLib) { showToast("PDF.jsがまだ準備できていません", "error"); return; }
+  if (!window.showDirectoryPicker) {
+    showToast("Chrome / Edge ブラウザをご利用ください", "error"); return;
+  }
+  try {
+    rootDirectoryHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+    await loadFolder(rootDirectoryHandle);
+  } catch (e) {
+    if (e.name !== "AbortError") showToast("フォルダ選択に失敗: " + e.message, "error");
+  }
+});
+
+async function loadFolder(dirHandle) {
+  files = [];
+  fileList.innerHTML = `<div class="loading" style="padding:1rem; text-align:center; color:var(--text-dim);">PDFを読み込み・解析中…</div>`;
+  progressWrap.style.display = "block";
+  progressBar.style.width = "0%";
+  stats.style.display = "none";
+  btnSearch.disabled = true;
+  searchInput.disabled = true;
+
+  const pdfEntries = [];
+  async function scanEntries(handle) {
+    for await (const entry of handle.values()) {
+      if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".pdf")) {
+        pdfEntries.push(entry);
+      } else if (entry.kind === "directory" && entry.name !== "出力画像") {
+        await scanEntries(entry);
+      }
+    }
+  }
+  
+  await scanEntries(dirHandle);
+
+  if (pdfEntries.length === 0) {
+    fileList.innerHTML = `<div class="empty-state" style="padding:1.5rem 0.5rem;"><div style="font-size:2rem;opacity:0.3;">📭</div><p style="font-size:1rem;">PDFが見つかりません</p></div>`;
+    progressWrap.style.display = "none";
+    showToast("PDFが見つかりませんでした", "error");
+    return;
+  }
+
+  let loaded = 0;
+  for (const entry of pdfEntries) {
+    try {
+      const file = await entry.getFile();
+      const cacheKey = `${entry.name}_${file.size}_${file.lastModified}`;
+      const buffer = await file.arrayBuffer();
+      const extracted = await extractTextFromPdf(buffer, cacheKey);
+      
+      const pdfUrl = URL.createObjectURL(file);
+
+      files.push({
+        name: entry.name,
+        lastModified: file.lastModified,
+        size: file.size,
+        text: extracted.text || "",
+        pageTexts: extracted.pageTexts || [],
+        pages: extracted.pages || 0,
+        error: extracted.error,
+        isLikelyScan: extracted.isLikelyScan,
+        pdfUrl: pdfUrl,
+        arrayBuffer: buffer,
+        fileObj: file
+      });
+    } catch (e) {
+      files.push({ name: entry.name, lastModified: 0, size: 0, text: "", pageTexts: [], pages: 0, error: e.message, isLikelyScan: false, pdfUrl: null, arrayBuffer: null });
+    }
+    loaded++;
+    progressBar.style.width = Math.round((loaded / pdfEntries.length) * 100) + "%";
+  }
+  progressWrap.style.display = "none";
+  renderFileList();
+  updateStats();
+  btnSearch.disabled = false;
+  searchInput.disabled = false;
+  btnClear.disabled = false;
+  showToast(`${files.length} 件のPDFを読み込みました`);
+}
+
+function renderFileList() {
+  if (!files.length) {
+    fileList.innerHTML = `<div class="empty-state" style="padding:1.5rem 0.5rem;"><div style="font-size:2rem;opacity:0.3;">📂</div><p style="font-size:1rem;">フォルダを選択してください</p></div>`;
+    return;
+  }
+  const sorted = [...files].sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+  fileList.innerHTML = sorted.map(f => {
+    const newBadge = isNew(f.lastModified) ? `<span style="background:rgba(22,163,74,0.25);color:#4ade80;padding:0.05rem 0.4rem;border-radius:999px;font-size:0.8rem;font-weight:700;">新</span>` : "";
+    const errIcon = f.error && !f.text ? "⚠️" : "📄";
+    return `<div class="file-item">
+      <span class="file-icon">${errIcon}</span>
+      <div class="file-info">
+        <div class="file-name">${escapeHtml(f.name)}</div>
+        <div class="file-meta">${formatSize(f.size)} • ${f.pages || "?"}p ${newBadge}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function updateStats() {
+  $("statFiles").textContent = files.length;
+  $("statHits").textContent = searchResults.length;
+  stats.style.display = "grid";
+}
+
+btnSearch.addEventListener("click", doSearch);
+searchInput.addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+$("sortOrder").addEventListener("change", () => { if (searchResults.length) renderResults(); });
+
+function doSearch() {
+  const q = searchInput.value.trim();
+  if (!q) {
+    showToast("キーワードを入力してください", "error");
+    return;
+  }
+  if (!files.length) {
+    showToast("先にフォルダを選択してください", "error");
+    return;
+  }
+
+  // 検索履歴へ確実に追加・保存する処理
+  if (!searchHistory.includes(q)) {
+    searchHistory.unshift(q);
+    if (searchHistory.length > 15) searchHistory.pop();
+    localStorage.setItem("pdfSearchHistory", JSON.stringify(searchHistory));
+    renderHistory();
+  }
+
+  const terms = q.split(/\s+/).filter(Boolean);
+  const useAnd = $("optAnd").checked;
+  const caseSensitive = $("optCase").checked;
+  const longContext = $("optLongContext").checked;
+  const dateFrom = $("dateFrom").value ? new Date($("dateFrom").value).getTime() : null;
+  const dateTo = $("dateTo").value ? new Date($("dateTo").value + "T23:59:59").getTime() : null;
+
+  const ctxBefore = longContext ? 350 : 200;
+  const ctxAfter = longContext ? 600 : 350;
+
+  searchResults = [];
+
+  files.forEach(f => {
+    if (!f.pageTexts || !f.pageTexts.length) return;
+    if (dateFrom && f.lastModified < dateFrom) return;
+    if (dateTo && f.lastModified > dateTo) return;
+
+    const checkTerms = caseSensitive ? terms : terms.map(t => t.toLowerCase());
+
+    f.pageTexts.forEach(pt => {
+      const targetText = caseSensitive ? pt.text : pt.text.toLowerCase();
+      const matched = useAnd
+        ? checkTerms.every(t => targetText.includes(t))
+        : checkTerms.some(t => targetText.includes(t));
+
+      if (!matched) return;
+
+      let positions = [];
+      let score = 0;
+
+      checkTerms.forEach(term => {
+        let pos = 0;
+        while ((pos = targetText.indexOf(term, pos)) !== -1) {
+          positions.push(pos);
+          score++;
+          pos += term.length;
+        }
+      });
+
+      positions.sort((a, b) => a - b);
+      const hitCount = positions.length;
+
+      if (positions.length > 0) {
+        const firstPos = positions[0];
+        const start = Math.max(0, firstPos - ctxBefore);
+        const end = Math.min(pt.text.length, firstPos + ctxAfter);
+        let excerpt = pt.text.slice(start, end);
+
+        if (start > 0) excerpt = "… " + excerpt;
+        if (end < pt.text.length) excerpt += " …";
+
+        searchResults.push({
+          file: f,
+          page: pt.page,
+          score: score,
+          hitCount: hitCount,
+          excerpt: excerpt,
+          terms: terms
+        });
+      }
+    });
+  });
+
+  updateStats();
+  renderResults();
+
+  const hasResults = searchResults.length > 0;
+  $("btnExportCsv").disabled = !hasResults;
+  $("btnExportMd").disabled = !hasResults;
+  $("btnExportTxt").disabled = !hasResults;
+
+  showToast(`⚡ ${searchResults.length} 件ヒットしました`);
+}
+
+function renderResults() {
+  if (!searchResults.length) {
+    resultsGrid.innerHTML = `
+    <div class="empty-state">
+      <div class="icon">🔍</div>
+      <h3>該当する結果がありません</h3>
+      <p>キーワードや条件を変えて再検索してください。</p>
+    </div>`;
+    resultsCount.textContent = "";
+    return;
+  }
+
+  const order = $("sortOrder").value;
+  
+  const grouped = {};
+  searchResults.forEach(r => {
+    if (!grouped[r.file.name]) grouped[r.file.name] = [];
+    grouped[r.file.name].push(r);
+  });
+
+  Object.keys(grouped).forEach(fileName => {
+    grouped[fileName].sort((a, b) => a.page - b.page);
+  });
+
+  let sortedFileNames = Object.keys(grouped);
+  if (order === "relevance") {
+    sortedFileNames.sort((a, b) => {
+      const scoreA = grouped[a].reduce((sum, item) => sum + item.score, 0);
+      const scoreB = grouped[b].reduce((sum, item) => sum + item.score, 0);
+      return scoreB - scoreA;
+    });
+  } else if (order === "newest") {
+    sortedFileNames.sort((a, b) => (grouped[b][0].file.lastModified || 0) - (grouped[a][0].file.lastModified || 0));
+  } else if (order === "oldest") {
+    sortedFileNames.sort((a, b) => (grouped[a][0].file.lastModified || 0) - (grouped[b][0].file.lastModified || 0));
+  } else if (order === "name") {
+    sortedFileNames.sort((a, b) => a.localeCompare(b));
+  }
+
+  resultsCount.textContent = `${searchResults.length} 件ヒット (${sortedFileNames.length} ファイル)`;
+
+  resultsGrid.innerHTML = sortedFileNames.map(fileName => {
+    const hits = grouped[fileName];
+    const fileInfo = hits[0].file;
+
+    return `
+    <div class="result-group">
+      <div class="result-group-title">
+        <span>📄 ${escapeHtml(fileName)}</span>
+        <span style="font-size:0.98rem; font-weight:600; color:var(--text-dim);">全 ${hits.length} 箇所ヒット (更新: ${formatDate(fileInfo.lastModified)})</span>
+      </div>
+      ${hits.map(hit => `
+        <div class="page-hit">
+          <div class="page-title">
+            <span>📑 ページ ${hit.page}</span>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <button class="btn-secondary btn-sm btn-save-img" data-filename="${escapeHtml(fileName)}" data-page="${hit.page}">📸 該当ページ画像保存</button>
+              ${fileInfo.pdfUrl ? `<a href="${fileInfo.pdfUrl}#page=${hit.page}" target="_blank" class="btn-secondary btn-sm btn-link">🔗 PDFファイルを開く</a>` : ''}
+              <button class="btn-action btn-sm btn-compare-add" data-filename="${escapeHtml(fileName)}" data-page="${hit.page}" data-excerpt="${escapeHtml(hit.excerpt)}">➕ 比較に追加</button>
+            </div>
+          </div>
+          <div class="hit-info">
+            <span>🔍 一致数 ${hit.hitCount}</span>
+            <span>⭐ スコア ${hit.score}</span>
+            <span>📅 ${formatDate(fileInfo.lastModified)}</span>
+          </div>
+          <div class="context-block">${highlight(hit.excerpt, hit.terms)}</div>
+        </div>
+      `).join("")}
+    </div>`;
+  }).join("");
+
+  resultsGrid.querySelectorAll(".btn-save-img").forEach(btn => {
+    btn.onclick = () => {
+      const f = files.find(x => x.name === btn.dataset.filename);
+      const page = parseInt(btn.dataset.page, 10);
+      if (f) savePageAsImage(f, page, f.name);
+    };
+  });
+
+  resultsGrid.querySelectorAll(".btn-compare-add").forEach(btn => {
+    btn.onclick = () => {
+      const f = files.find(x => x.name === btn.dataset.filename);
+      if (f) {
+        addToCompare({
+          id: `${f.name}_p${btn.dataset.page}_${Date.now()}`,
+          file: f,
+          page: parseInt(btn.dataset.page, 10),
+          excerpt: btn.dataset.excerpt,
+          terms: searchInput.value.split(/\s+/)
+        });
+      }
+    };
+  });
+}
+
+function addToCompare(item) {
+  compareList.push(item);
+  updateCompareBar();
+  showToast(`比較リストに追加 (${compareList.length} 件)`);
+}
+
+function updateCompareBar() {
+  const hasAny = compareList.length > 0;
+  compareBar.classList.toggle("show", hasAny);
+  $("compareCount").textContent = compareList.length;
+  
+  const slots = $("compareSlots");
+  slots.innerHTML = compareList.map((item, index) => `
+    <div class="compare-slot">
+      <span class="slot-name">📄 ${escapeHtml(item.file.name)} (p.${item.page})</span>
+      <span class="btn-del" data-index="${index}">✕</span>
+    </div>
+  `).join("");
+
+  slots.querySelectorAll(".btn-del").forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      compareList.splice(parseInt(btn.dataset.index, 10), 1);
+      updateCompareBar();
+    };
+  });
+
+  $("btnStartCompare").disabled = compareList.length === 0;
+}
+
+$("btnStartCompare").addEventListener("click", () => {
+  if (compareList.length === 0) return;
+  renderCompareView();
+  normalResults.style.display = "none";
+  compareView.classList.add("show");
+  showToast("⚡ マルチ比較モード起動");
+});
+
+$("btnClearCompare").addEventListener("click", () => {
+  compareList = [];
+  updateCompareBar();
+});
+
+$("btnCloseCompare").addEventListener("click", () => {
+  compareView.classList.remove("show");
+  normalResults.style.display = "block";
+});
+
+async function renderPdfPageCanvas(arrayBuffer, pageNum, canvasId) {
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer.slice(0) });
+    const pdf = await loadingTask.promise;
+    const page = await pdf.getPage(pageNum);
+    
+    const viewport = page.getViewport({ scale: 1.2 });
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({ canvasContext: context, viewport: viewport }).promise;
+  } catch (e) {
+    console.error("PDF描画エラー:", e);
+  }
+}
+
+function renderCompareView() {
+  const sortedCompareList = [...compareList].sort((a, b) => {
+    const timeA = a.file.lastModified || 0;
+    const timeB = b.file.lastModified || 0;
+    if (timeA !== timeB) return timeA - timeB;
+    return a.page - b.page;
+  });
+
+  const container = $("compareContainer");
+  container.innerHTML = sortedCompareList.map((item, idx) => {
+    const canvasId = `pdf-canvas-${idx}`;
+    const formattedDate = formatDate(item.file.lastModified);
+
+    return `
+    <div class="compare-panel" id="compare-panel-${idx}">
+      <div class="compare-panel-header">
+        <h3>📄 ${escapeHtml(item.file.name)}</h3>
+        <button class="btn-ghost btn-sm btn-remove-panel" data-id="${item.id}">✕ 削除</button>
+      </div>
+      
+      <div class="compare-panel-controls">
+        <div>
+          <span style="font-weight:800; color:#38bdf8; font-size:1.05rem; display:block;">📑 p.${item.page}</span>
+          <span style="font-size:0.85rem; color:var(--text-dim);">更新: ${formattedDate}</span>
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <button class="btn-secondary btn-sm btn-compare-save-img" data-index="${idx}">📸 画像保存</button>
+          ${item.file.pdfUrl ? `<a href="${item.file.pdfUrl}#page=${item.page}" target="_blank" class="btn-secondary btn-sm btn-link">🔗 PDFを開く</a>` : ''}
+        </div>
+      </div>
+
+      <div class="compare-panel-body">
+        <div class="compare-card-section">
+          <div class="compare-card-label">【PDF 該当ページプレビュー】</div>
+          <div class="pdf-canvas-wrapper">
+            <canvas id="${canvasId}" class="pdf-render-canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="compare-card-section" style="flex:1;">
+          <div class="compare-card-label">【該当箇所の抜粋テキスト】</div>
+          <div class="compare-card-content" id="compare-text-${idx}">${highlight(item.excerpt, item.terms)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  sortedCompareList.forEach((item, idx) => {
+    if (item.file.arrayBuffer) {
+      renderPdfPageCanvas(item.file.arrayBuffer, item.page, `pdf-canvas-${idx}`);
+    }
+    setTimeout(() => {
+      const panelBody = document.querySelector(`#compare-panel-${idx} .compare-panel-body`);
+      if (panelBody) panelBody.scrollTop = 0;
+    }, 50);
+  });
+
+  container.querySelectorAll(".btn-compare-save-img").forEach(btn => {
+    btn.onclick = () => {
+      const idx = parseInt(btn.dataset.index, 10);
+      const item = sortedCompareList[idx];
+      if (item) savePageAsImage(item.file, item.page, item.file.name);
+    };
+  });
+
+  container.querySelectorAll(".btn-remove-panel").forEach(btn => {
+    btn.onclick = () => {
+      const targetId = btn.dataset.id;
+      compareList = compareList.filter(x => x.id !== targetId);
+      updateCompareBar();
+      if (compareList.length > 0) {
+        renderCompareView();
+      } else {
+        compareView.classList.remove("show");
+        normalResults.style.display = "block";
+      }
+    };
+  });
+}
+
+function downloadFile(filename, text, type) {
+  const blob = new Blob([text], { type: type });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+$("btnExportCsv").addEventListener("click", () => {
+  const bom = "\uFEFF";
+  const header = "ファイル名,更新日,ページ,スコア,抜粋\n";
+  const rows = searchResults.map(r => {
+    const excerpt = `"${r.excerpt.replace(/"/g, '""')}"`;
+    return `"${r.file.name}",${formatDate(r.file.lastModified)},${r.page},${r.score},${excerpt}`;
+  }).join("\n");
+  downloadFile(`${getTimestampStr()}_search.csv`, bom + header + rows, "text/csv;charset=utf-8;");
+  showToast("CSVを出力しました");
+});
+
+$("btnExportMd").addEventListener("click", () => {
+  let md = `# PDF検索結果\n\n検索語: ${searchInput.value}\n件数: ${searchResults.length}\n\n`;
+  searchResults.forEach((r, i) => {
+    md += `## ${i + 1}. ${r.file.name} (Page ${r.page})\n`;
+    md += `- 更新日: ${formatDate(r.file.lastModified)}\n- スコア: ${r.score}\n\n`;
+    md += `> ${r.excerpt}\n\n---\n\n`;
+  });
+  downloadFile(`${getTimestampStr()}_search.md`, md, "text/markdown;charset=utf-8;");
+  showToast("Markdownを出力しました");
+});
+
+$("btnExportTxt").addEventListener("click", () => {
+  let txt = `PDF検索結果\n検索語: ${searchInput.value}\n件数: ${searchResults.length}\n${"=".repeat(40)}\n\n`;
+  searchResults.forEach((r, i) => {
+    txt += `[${i + 1}] ${r.file.name} (Page ${r.page})\n更新日: ${formatDate(r.file.lastModified)} / スコア: ${r.score}\n${r.excerpt}\n\n${"-".repeat(30)}\n\n`;
+  });
+  downloadFile(`${getTimestampStr()}_search.txt`, txt, "text/plain;charset=utf-8;");
+  showToast("テキストを出力しました");
+});
+
+function renderHistory() {
+  const el = $("historyList");
+  if (!searchHistory.length) {
+    el.innerHTML = `<div style="color:var(--text-dim);font-size:0.98rem;">まだありません</div>`;
+    return;
+  }
+  el.innerHTML = searchHistory.map(q => `<div class="history-item" data-q="${escapeHtml(q)}">⚡ ${escapeHtml(q)}</div>`).join("");
+  el.querySelectorAll(".history-item").forEach(item => {
+    item.onclick = () => { searchInput.value = item.dataset.q; doSearch(); };
+  });
+}
+
+btnClear.addEventListener("click", () => {
+  files.forEach(f => { if(f.pdfUrl) URL.revokeObjectURL(f.pdfUrl); });
+  files = []; searchResults = []; compareList = []; rootDirectoryHandle = null;
+  searchInput.value = "";
+  renderFileList();
+  resultsGrid.innerHTML = `<div class="empty-state"><div class="icon">🚀</div><h3>準備完了</h3><p>フォルダを選択し、キーワードを入力してください。</p></div>`;
+  resultsCount.textContent = "";
+  stats.style.display = "none";
+  btnSearch.disabled = true; searchInput.disabled = true; btnClear.disabled = true;
+  $("btnExportCsv").disabled = true; $("btnExportMd").disabled = true; $("btnExportTxt").disabled = true;
+  updateCompareBar();
+  compareView.classList.remove("show");
+  normalResults.style.display = "block";
+  showToast("クリアしました");
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement !== searchInput) {
+    e.preventDefault();
+    searchInput.focus();
+  }
+  if (e.key === "Escape") {
+    if (compareView.classList.contains("show")) {
+      compareView.classList.remove("show");
+      normalResults.style.display = "block";
+    }
+  }
+});
+
+renderHistory();
+initPdfJs().then(ok => { if (!ok) btnSelectFolder.disabled = true; });
+if (!window.showDirectoryPicker) showToast("Google Chrome または Microsoft Edge でご利用ください", "error");
+</script>
+</body>
+</html>

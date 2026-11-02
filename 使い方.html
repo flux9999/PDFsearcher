@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>操作説明書 - ローカルPDF検索アシスタント</title>
+<style>
+/* 高齢者の方でも見やすい超大型・高コントラスト設計 */
+:root {
+  --bg: #090d16;
+  --surface: #111827;
+  --surface2: #1f2937;
+  --border: #4b5563;
+  --text: #ffffff;
+  --text-dim: #e5e7eb;
+  --primary: #0284c7;
+  --primary-light: #38bdf8;
+  --accent: #a78bfa;
+  --warning-bg: rgba(245, 158, 11, 0.2);
+  --warning-border: #f59e0b;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 2.0;
+  padding: 3rem 2rem;
+  font-size: 24px; /* 本文の基本フォントサイズを24pxに拡大 */
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+header {
+  border-bottom: 3px solid var(--border);
+  padding-bottom: 2rem;
+  margin-bottom: 3.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+h1 {
+  font-size: 2.8rem; /* タイトルはさらに大きく */
+  color: #ffffff;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.btn-close {
+  background: #dc2626;
+  color: #fff;
+  text-decoration: none;
+  padding: 1rem 2.2rem;
+  border-radius: var(--radius);
+  font-weight: 800;
+  font-size: 1.3rem;
+  border: 2px solid #f87171;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
+}
+
+.btn-close:hover {
+  background: #b91c1c;
+  transform: scale(1.02);
+}
+
+/* 冒頭インフォグラフィックエリア */
+.hero-graphic-card {
+  background: var(--surface);
+  border: 3px solid var(--primary-light);
+  border-radius: var(--radius);
+  padding: 3rem;
+  margin-bottom: 4rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+.hero-graphic-card h2 {
+  font-size: 2rem;
+  color: var(--primary-light);
+  margin-bottom: 1.8rem;
+  font-weight: 900;
+}
+
+.img-container {
+  width: 100%;
+  background: #030712;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 380px;
+}
+
+.img-container img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* マニュアル各セクション */
+.section-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3rem;
+  margin-bottom: 3rem;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+}
+
+.section-card h3 {
+  font-size: 2.2rem;
+  color: #c4b5fd;
+  margin-bottom: 2rem;
+  border-left: 8px solid var(--accent);
+  padding-left: 1.5rem;
+  font-weight: 900;
+}
+
+/* 強烈に目立たせる重要強調ボックス */
+.highlight-box {
+  background: var(--warning-bg);
+  border-left: 8px solid var(--warning-border);
+  padding: 2rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 2rem 0;
+  font-size: 1.35rem; /* 重要説明はさらに大きく */
+  line-height: 1.9;
+}
+
+.highlight-box strong {
+  color: #fde047;
+  font-size: 1.45rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.step-list {
+  list-style: none;
+  counter-reset: step-counter;
+}
+
+.step-list li {
+  counter-increment: step-counter;
+  position: relative;
+  padding-left: 5rem;
+  margin-bottom: 2.2rem;
+  font-size: 1.35rem; /* 手順の文字も大きく */
+}
+
+.step-list li::before {
+  content: counter(step-counter);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 1.6rem;
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.4);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.feature-box {
+  background: #030712;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 2.2rem;
+}
+
+.feature-box h4 {
+  color: var(--primary-light);
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 800;
+}
+
+.feature-box p {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  line-height: 1.8;
+}
+
+.badge {
+  background: var(--surface2);
+  color: var(--primary-light);
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-family: monospace;
+  font-weight: 800;
+  border: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>📖 操作説明書 ＆ ガイド</h1>
+    <button class="btn-close" onclick="window.close();">✕ 画面を閉じる</button>
+  </header>
+
+  <!-- 冒頭：インフォグラフィック画像エリア -->
+  <div class="hero-graphic-card">
+    <h2>📊 全体概要・基本インフォグラフィック</h2>
+    <div class="img-container">
+      <img src="gaiyou.png" alt="全体インフォグラフィック概要" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+      <div style="display:none; color:var(--text-dim); text-align:center; padding:4rem; font-size:1.5rem;">
+        ⚠️ <span class="badge">gaiyou.png</span> が見つかりません。<br>同じフォルダに画像ファイルを配置してください。
+      </div>
+    </div>
+  </div>
+
+  <!-- セクション1: 起動と準備 -->
+  <div class="section-card">
+    <h3>1. 起動と初期セットアップ</h3>
+    <ol class="step-list">
+      <li><strong>アプリの起動:</strong> フォルダ内の <span class="badge">start.bat</span> をダブルクリックします。（セキュリティ画面が出たら「はい」を選択）</li>
+      <li><strong>フォルダの選択:</strong> メイン画面右上の「📁 フォルダを選択」を押し、PDFが入っている大元のフォルダを選択します。</li>
+    </ol>
+
+    <div class="highlight-box">
+      <strong>💡 大切なポイント（サブフォルダの検索について）</strong>
+      選択したフォルダの<strong>内部にあるすべてのサブフォルダ（階層下）も自動的にすべて検索対象に含まれます</strong>。フォルダが階層に分かれていても、バラバラに入れられていても、まとめて一括で横断検索が可能です。
+    </div>
+  </div>
+
+  <!-- セクション2: 検索機能 -->
+  <div class="section-card">
+    <h3>2. カンタン検索のテクニック</h3>
+    <div class="feature-grid">
+      <div class="feature-box">
+        <h4>🔍 複数のキーワードで絞り込む</h4>
+        <p>キーワードの間に「スペース」を入れると、すべての単語を含んでいるページだけをピタリと探し出せます。</p>
+      </div>
+      <div class="feature-box">
+        <h4>📅 日付（期間）で絞り込む</h4>
+        <p>開始日と終了日を指定することで、特定の時期に新しく更新された文書だけに絞って検索できます。</p>
+      </div>
+      <div class="feature-box">
+        <h4>⚡ すぐに入力できるショートカット</h4>
+        <p>キーボードの <span class="badge">/</span> (スラッシュ) キーを押すだけで、マウスを使わずに一瞬で検索窓にカーソルが移動します。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- セクション3: 比較ビュー・画像保存 -->
+  <div class="section-card">
+    <h3>3. 新機能：マルチ比較ビュー ＆ 確実ローカル保存</h3>
+    <ol class="step-list">
+      <li><strong>比較リストへ追加:</strong> 検索結果の「➕ 比較に追加」ボタンを押して、比較したいページを次々にお気に入り登録します。</li>
+      <li><strong>並べて比較スタート:</strong> 「⚡ 並べて比較」を押すと比較画面が開きます。<br>
+        <span style="color:var(--primary-light); font-weight:bold;">※古い更新日の順、およびページの若い順に自動で綺麗に並ぶため、新旧の違いが圧倒的に見比べやすくなります。</span>
+      </li>
+      <li><strong>「出力画像」フォルダへダイレクト保存:</strong> 「📸 該当ページ画像保存」を押すと、プロジェクト内にある <span class="badge">出力画像</span> フォルダへ、高画質な画像として自動で直接保存されます。</li>
+    </ol>
+
+    <div class="highlight-box">
+      <strong>⚠️ 初回操作時のお願い</strong>
+      完全ローカル（外部にデータを送らない安全な仕組み）で動くため、初めて画像保存する際のみ、ブラウザから「フォルダへのアクセス（書き込み）を許可しますか？」と聞かれます。必ず<strong>「許可」</strong>を選択してください。
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
